@@ -1,47 +1,38 @@
-import os
-from dotenv import load_dotenv
-from google import genai
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from docx import Document
 
-load_dotenv()
+def save_as_txt(text, filename="output.txt"):
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(text)
+    return filename
 
-# Initialize the client with your API key
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+def save_as_pdf(text, filename="output.pdf"):
+    c = canvas.Canvas(filename, pagesize=A4)
+    width, height = A4
+    lines = text.split('\n')
+    y = height - 40
+    for line in lines:
+        if y < 40:
+            c.showPage()
+            y = height - 40
+        c.drawString(40, y, line)
+        y -= 15
+    c.save()
+    return filename
 
-def correct_text(raw_text):
-    """
-    Send raw OCR text to Gemini for grammar correction and formatting.
-    """
-    prompt = f"""
-    You are an AI assistant that corrects handwritten OCR text.
-    Fix spelling, grammar, and reconstruct incomplete words.
-    Format the result into clean paragraphs.
+def save_as_docx(text, filename="output.docx"):
+    doc = Document()
+    doc.add_paragraph(text)
+    doc.save(filename)
+    return filename
 
-    Raw text:
-    {raw_text}
-
-    Corrected text:
-    """
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",  # Use the latest model
-        contents=prompt
-    )
-    return response.text.strip()
-
-def extract_todos(raw_text):
-    """
-    Extract actionable to-do items from the raw text.
-    """
-    prompt = f"""
-    Extract all actionable tasks from the following notes.
-    Return them as a bullet list (each starting with - ).
-
-    Notes:
-    {raw_text}
-
-    To-Do list:
-    """
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
-    return response.text.strip()
+def save_tasks_csv(tasks, filename="tasks.csv"):
+    import csv
+    with open(filename, "w", newline='', encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Task", "Status"])
+        for task in tasks.split('\n'):
+            if task.strip():
+                writer.writerow([task.strip(), "Pending"])
+    return filename
